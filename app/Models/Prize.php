@@ -14,29 +14,26 @@ class Prize extends Model
     public static function nextPrize($totalPrizes)
     {
         $probabilities = Prize::pluck('probability', 'title');
-        
-        $prizes = [];
-        foreach ($probabilities as $prize => $probability) {
-            $prizes[$prize] = round(($probability / 100) * $totalPrizes);
-        }
-        
         static $prizesLeft = null;
-        static $initialized = false;
         
-        if (!$initialized) {
-            $prizesLeft = $prizes;
-            $initialized = true;
+        if ($prizesLeft === null) {
+            $prizesLeft = collect($probabilities)->mapWithKeys(function ($probability, $prize) use ($totalPrizes) {
+                return [$prize => round(($probability / 100) * $totalPrizes)];
+            })->toArray();
         }
         
         foreach ($prizesLeft as $prize => $remaining) {
             if ($remaining > 0) {
                 $prizesLeft[$prize]--;
                 
-                \App\Models\Prize::where('title', $prize)->increment('awarded_count');
+                Prize::where('title', $prize)->increment('awarded_count');
 
                 return $prize;
             }
         }
+        
+        return null;
     }
+
 
 }
